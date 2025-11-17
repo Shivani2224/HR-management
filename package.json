@@ -2,7 +2,7 @@
   "name": "hr-system",
   "version": "1.0.0",
   "type": "module",
-  "homepage": "https://Shivani2224.github.io/HR-Management-System",
+  "homepage": "https://Shivani2224.github.io/HR-management",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
