@@ -15,6 +15,7 @@ import Payslips from './components/Payslips'
 import Profile from './components/Profile'
 import TimeCorrection from './components/TimeCorrection'
 import TimeCorrectionApproval from './components/TimeCorrectionApproval'
+import EmployeeStatus from './components/EmployeeStatus'
 
 function App() {
   const [user, setUser] = useState(null)
@@ -56,6 +57,7 @@ function App() {
                 {currentView === 'time-correction' && <TimeCorrection username={user.username} userRole={user.role} />}
                 {currentView === 'payslips' && <Payslips username={user.username} userRole={user.role} />}
                 {currentView === 'profile' && <Profile username={user.username} userRole={user.role} />}
+                {currentView === 'employee-status' && <EmployeeStatus />}
               </>
             )}
             {user.role === 'manager' && (
@@ -71,6 +73,7 @@ function App() {
                 {currentView === 'employees' && <EmployeeDirectory />}
                 {currentView === 'reports' && <Reports />}
                 {currentView === 'settings' && <Settings userRole={user.role} />}
+                {currentView === 'employee-status' && <EmployeeStatus />}
               </>
             )}
             {user.role === 'admin' && (
@@ -82,6 +85,7 @@ function App() {
                 {currentView === 'reports' && <Reports />}
                 {currentView === 'settings' && <Settings userRole={user.role} />}
                 {currentView === 'users' && <UserManagement />}
+                {currentView === 'employee-status' && <EmployeeStatus />}
               </>
             )}
           </div>

@@ -52,6 +52,7 @@ function Navbar({ user, onLogout, onNavigate, currentView }) {
                   <a onClick={() => handleNavigate('payslips')} className="block px-4 py-3 text-gray-800 cursor-pointer border-b border-gray-200 hover:bg-gray-50 hover:text-teal transition-colors">Payslips</a>
                 </>
               )}
+              <a onClick={() => handleNavigate('employee-status')} className="block px-4 py-3 text-gray-800 cursor-pointer border-b border-gray-200 hover:bg-gray-50 hover:text-teal transition-colors">Team Status</a>
               {user.role === 'manager' && (
                 <>
                   <a onClick={() => handleNavigate('leave-approval')} className="block px-4 py-3 text-gray-800 cursor-pointer border-b border-gray-200 hover:bg-gray-50 hover:text-teal transition-colors">Leave Approval</a>
