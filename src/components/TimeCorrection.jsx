@@ -5,8 +5,6 @@ function TimeCorrection({ username, userRole }) {
   const [selectedRecord, setSelectedRecord] = useState(null)
   const [correctionRequests, setCorrectionRequests] = useState([])
   const [isEditing, setIsEditing] = useState(false)
-
-  // Form fields for correction
   const [newLoginTime, setNewLoginTime] = useState('')
   const [newLogoutTime, setNewLogoutTime] = useState('')
   const [correctionReason, setCorrectionReason] = useState('')
@@ -17,33 +15,23 @@ function TimeCorrection({ username, userRole }) {
   }, [username])
 
   const loadAttendanceRecords = () => {
-    // Load recent attendance (last 7 days)
     const allRecords = JSON.parse(localStorage.getItem(`attendance_${username}`) || '[]')
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-
-    const recentRecords = allRecords.filter(record => {
-      const recordDate = new Date(record.date)
-      return recordDate >= sevenDaysAgo
-    })
-
+    const recentRecords = allRecords.filter(record => new Date(record.date) >= sevenDaysAgo)
     setAttendanceRecords(recentRecords)
   }
 
   const loadCorrectionRequests = () => {
     const requests = JSON.parse(localStorage.getItem('timeCorrectionRequests') || '[]')
-    const myRequests = requests.filter(req => req.username === username)
-    setCorrectionRequests(myRequests)
+    setCorrectionRequests(requests.filter(req => req.username === username))
   }
 
   const handleSelectRecord = (record) => {
     setSelectedRecord(record)
     setIsEditing(true)
-
-    // Set initial values
     const loginDate = new Date(record.loginTime)
     const logoutDate = new Date(record.logoutTime)
-
     setNewLoginTime(formatDateTimeForInput(loginDate))
     setNewLogoutTime(formatDateTimeForInput(logoutDate))
     setCorrectionReason('')
@@ -63,16 +51,13 @@ function TimeCorrection({ username, userRole }) {
       alert('Please provide a reason for the time correction')
       return
     }
-
     const newLoginDate = new Date(newLoginTime)
     const newLogoutDate = new Date(newLogoutTime)
-
     if (newLogoutDate <= newLoginDate) {
       alert('Logout time must be after login time')
       return
     }
 
-    // Create correction request
     const correctionRequest = {
       id: Date.now(),
       username,
@@ -85,20 +70,11 @@ function TimeCorrection({ username, userRole }) {
       submittedDate: new Date().toISOString(),
     }
 
-    // Save to global correction requests
     const allRequests = JSON.parse(localStorage.getItem('timeCorrectionRequests') || '[]')
     allRequests.unshift(correctionRequest)
     localStorage.setItem('timeCorrectionRequests', JSON.stringify(allRequests))
-
-    alert('Time correction request submitted successfully! Waiting for manager approval.')
-
-    // Reset form
-    setIsEditing(false)
-    setSelectedRecord(null)
-    setNewLoginTime('')
-    setNewLogoutTime('')
-    setCorrectionReason('')
-
+    alert('Time correction request submitted successfully!')
+    handleCancel()
     loadCorrectionRequests()
   }
 
@@ -110,216 +86,139 @@ function TimeCorrection({ username, userRole }) {
     setCorrectionReason('')
   }
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
-  }
+  const formatDate = (dateString) => new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+  const formatTime = (timestamp) => new Date(timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
 
-  const formatTime = (timestamp) => {
-    return new Date(timestamp).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
-
-  const getStatusBadgeClass = (status) => {
+  const getStatusClass = (status) => {
     switch (status) {
-      case 'approved':
-        return 'px-4 py-2 rounded-full text-sm font-semibold bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-      case 'rejected':
-        return 'px-4 py-2 rounded-full text-sm font-semibold bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-      default:
-        return 'px-4 py-2 rounded-full text-sm font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
+      case 'approved': return 'bg-green/10 text-green'
+      case 'rejected': return 'bg-red/10 text-red'
+      default: return 'bg-amber/10 text-amber'
     }
   }
 
   return (
-    <div className="bg-white dark:bg-[#0f3460] rounded-xl p-8 shadow-lg max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-[#006d77] dark:text-[#83c5be] mb-6">Time Correction</h1>
-        <p className="text-gray-600 dark:text-gray-300">Request corrections to your attendance records</p>
-      </div>
-
-      {/* Edit Form */}
-      {isEditing && selectedRecord && (
-        <div className="bg-[#f8f9fa] dark:bg-[#16213e] p-6 rounded-lg border-2 border-[#e9ecef] dark:border-[#2a3f5f] mb-8">
-          <h2 className="text-xl font-semibold text-[#006d77] dark:text-[#83c5be] mb-4">Request Time Correction</h2>
-          <div className="mb-6">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Original Record</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <span className="block text-sm text-gray-600 dark:text-gray-400">Date:</span>
-                <span className="text-gray-900 dark:text-white font-medium">{formatDate(selectedRecord.date)}</span>
-              </div>
-              <div>
-                <span className="block text-sm text-gray-600 dark:text-gray-400">Login:</span>
-                <span className="text-gray-900 dark:text-white font-medium">{formatTime(selectedRecord.loginTime)}</span>
-              </div>
-              <div>
-                <span className="block text-sm text-gray-600 dark:text-gray-400">Logout:</span>
-                <span className="text-gray-900 dark:text-white font-medium">{formatTime(selectedRecord.logoutTime)}</span>
-              </div>
-              <div>
-                <span className="block text-sm text-gray-600 dark:text-gray-400">Work Time:</span>
-                <span className="text-gray-900 dark:text-white font-medium">{selectedRecord.totalWorked}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">New Times</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">New Login Time</label>
-                <input
-                  type="datetime-local"
-                  value={newLoginTime}
-                  onChange={(e) => setNewLoginTime(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-[#83c5be] dark:border-[rgba(131,197,190,0.3)] rounded-lg bg-[#edf6f9] dark:bg-[rgba(22,33,62,0.6)] dark:text-white focus:outline-none focus:border-[#006d77]"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">New Logout Time</label>
-                <input
-                  type="datetime-local"
-                  value={newLogoutTime}
-                  onChange={(e) => setNewLogoutTime(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-[#83c5be] dark:border-[rgba(131,197,190,0.3)] rounded-lg bg-[#edf6f9] dark:bg-[rgba(22,33,62,0.6)] dark:text-white focus:outline-none focus:border-[#006d77]"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Reason for Correction</label>
-              <textarea
-                value={correctionReason}
-                onChange={(e) => setCorrectionReason(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-[#83c5be] dark:border-[rgba(131,197,190,0.3)] rounded-lg bg-[#edf6f9] dark:bg-[rgba(22,33,62,0.6)] dark:text-white focus:outline-none focus:border-[#006d77]"
-                rows="4"
-                placeholder="Please explain why you need this correction..."
-              />
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <button className="px-6 py-3 bg-gradient-to-br from-[#006d77] to-[#83c5be] text-white rounded-lg font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all" onClick={handleSubmitCorrection}>
-                Submit Request
-              </button>
-              <button className="px-6 py-3 bg-[#f8f9fa] dark:bg-[#16213e] text-gray-700 dark:text-gray-200 rounded-lg font-semibold border-2 border-[#e9ecef] dark:border-[#2a3f5f] hover:border-[#006d77] transition-all" onClick={handleCancel}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Recent Attendance Records */}
-      {!isEditing && (
+    <div className="min-h-[calc(100vh-60px)] bg-gray-50 p-5">
+      <div className="max-w-5xl mx-auto">
         <div className="mb-8">
-          <h2 className="text-xl font-semibold text-[#006d77] dark:text-[#83c5be] mb-4">Recent Attendance (Last 7 Days)</h2>
-          {attendanceRecords.length === 0 ? (
-            <div className="bg-[#f8f9fa] dark:bg-[#16213e] p-6 rounded-lg border-2 border-[#e9ecef] dark:border-[#2a3f5f] text-center">
-              <p className="text-gray-600 dark:text-gray-300">No recent attendance records found</p>
-            </div>
-          ) : (
-            <div className="bg-white dark:bg-[#16213e] rounded-lg overflow-hidden border border-[#e9ecef] dark:border-[#2a3f5f]">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-[#f8f9fa] dark:bg-[#16213e] border-b border-[#e9ecef] dark:border-[#2a3f5f]">
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-[#006d77] dark:text-[#83c5be]">Date</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-[#006d77] dark:text-[#83c5be]">Login Time</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-[#006d77] dark:text-[#83c5be]">Logout Time</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-[#006d77] dark:text-[#83c5be]">Work Time</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-[#006d77] dark:text-[#83c5be]">Break Time</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-[#006d77] dark:text-[#83c5be]">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {attendanceRecords.map((record) => (
-                    <tr key={record.id} className="border-b border-[#e9ecef] dark:border-[#2a3f5f] hover:bg-[#f8f9fa] dark:hover:bg-[#16213e]/50">
-                      <td className="px-6 py-4 text-gray-900 dark:text-white">{formatDate(record.date)}</td>
-                      <td className="px-6 py-4 text-gray-600 dark:text-gray-300">{formatTime(record.loginTime)}</td>
-                      <td className="px-6 py-4 text-gray-600 dark:text-gray-300">{formatTime(record.logoutTime)}</td>
-                      <td className="px-6 py-4 text-gray-600 dark:text-gray-300">{record.totalWorked}</td>
-                      <td className="px-6 py-4 text-gray-600 dark:text-gray-300">{record.totalBreak}</td>
-                      <td className="px-6 py-4">
-                        <button
-                          className="px-4 py-2 bg-gradient-to-br from-[#006d77] to-[#83c5be] text-white rounded-lg font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all text-sm"
-                          onClick={() => handleSelectRecord(record)}
-                        >
-                          Request Correction
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <h1 className="text-2xl font-bold text-teal mb-1">Time Correction</h1>
+          <p className="text-gray-500">Request corrections to your attendance records</p>
         </div>
-      )}
 
-      {/* Correction Requests History */}
-      {!isEditing && (
-        <div>
-          <h2 className="text-xl font-semibold text-[#006d77] dark:text-[#83c5be] mb-4">My Correction Requests</h2>
-          {correctionRequests.length === 0 ? (
-            <div className="bg-[#f8f9fa] dark:bg-[#16213e] p-6 rounded-lg border-2 border-[#e9ecef] dark:border-[#2a3f5f] text-center">
-              <p className="text-gray-600 dark:text-gray-300">No correction requests submitted</p>
+        {isEditing && selectedRecord && (
+          <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
+            <h2 className="text-lg font-bold text-teal mb-4">Request Time Correction</h2>
+            <div className="bg-gray-50 p-4 rounded-md mb-4">
+              <h3 className="font-semibold text-gray-800 mb-2">Original Record</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <div><span className="text-gray-500">Date:</span> <span className="font-medium">{formatDate(selectedRecord.date)}</span></div>
+                <div><span className="text-gray-500">Login:</span> <span className="font-medium">{formatTime(selectedRecord.loginTime)}</span></div>
+                <div><span className="text-gray-500">Logout:</span> <span className="font-medium">{formatTime(selectedRecord.logoutTime)}</span></div>
+                <div><span className="text-gray-500">Work Time:</span> <span className="font-medium text-teal">{selectedRecord.totalWorked}</span></div>
+              </div>
             </div>
-          ) : (
+
             <div className="space-y-4">
-              {correctionRequests.map((request) => (
-                <div key={request.id} className="bg-[#f8f9fa] dark:bg-[#16213e] p-6 rounded-lg border-2 border-[#e9ecef] dark:border-[#2a3f5f]">
-                  <div className="flex justify-between items-start mb-4">
-                    <span className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {formatDate(request.originalRecord.date)}
-                    </span>
-                    <span className={getStatusBadgeClass(request.status)}>
-                      {request.status.toUpperCase()}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Original</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">Login: {formatTime(request.originalRecord.loginTime)}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">Logout: {formatTime(request.originalRecord.logoutTime)}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Requested</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">Login: {formatTime(request.newLoginTime)}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">Logout: {formatTime(request.newLogoutTime)}</p>
-                    </div>
-                  </div>
-
-                  <div className="bg-white dark:bg-[#0f3460] p-4 rounded-lg mb-2">
-                    <strong className="text-gray-900 dark:text-white">Reason:</strong>
-                    <span className="ml-2 text-gray-700 dark:text-gray-300">{request.reason}</span>
-                  </div>
-
-                  {request.rejectionReason && (
-                    <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg mb-2">
-                      <strong className="text-gray-900 dark:text-white">Rejection Reason:</strong>
-                      <span className="ml-2 text-gray-700 dark:text-gray-300">{request.rejectionReason}</span>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 pt-3 border-t border-[#e9ecef] dark:border-[#2a3f5f]">
-                    <span>Submitted: {formatDate(request.submittedDate)}</span>
-                    {request.reviewedDate && (
-                      <span>Reviewed: {formatDate(request.reviewedDate)}</span>
-                    )}
-                  </div>
+              <h3 className="font-semibold text-gray-800">New Times</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">New Login Time</label>
+                  <input type="datetime-local" value={newLoginTime} onChange={(e) => setNewLoginTime(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:border-teal" />
                 </div>
-              ))}
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">New Logout Time</label>
+                  <input type="datetime-local" value={newLogoutTime} onChange={(e) => setNewLogoutTime(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:border-teal" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Reason for Correction</label>
+                <textarea value={correctionReason} onChange={(e) => setCorrectionReason(e.target.value)} rows="3" placeholder="Please explain why you need this correction..." className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:border-teal resize-none" />
+              </div>
+              <div className="flex gap-3">
+                <button onClick={handleSubmitCorrection} className="bg-teal text-white px-6 py-2.5 rounded-md font-medium hover:bg-teal-dark transition-colors">Submit Request</button>
+                <button onClick={handleCancel} className="bg-gray-500 text-white px-6 py-2.5 rounded-md font-medium hover:bg-gray-500/90 transition-colors">Cancel</button>
+              </div>
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+
+        {!isEditing && (
+          <div className="bg-white rounded-lg shadow-sm mb-6 overflow-hidden">
+            <div className="p-4 border-b border-gray-200">
+              <h2 className="text-lg font-bold text-teal">Recent Attendance (Last 7 Days)</h2>
+            </div>
+            {attendanceRecords.length === 0 ? (
+              <div className="text-center py-10 text-gray-500">No recent attendance records found</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr>
+                      <th className="bg-teal text-white p-3 text-left text-sm font-semibold">Date</th>
+                      <th className="bg-teal text-white p-3 text-left text-sm font-semibold">Login</th>
+                      <th className="bg-teal text-white p-3 text-left text-sm font-semibold">Logout</th>
+                      <th className="bg-teal text-white p-3 text-left text-sm font-semibold">Work Time</th>
+                      <th className="bg-teal text-white p-3 text-left text-sm font-semibold">Break</th>
+                      <th className="bg-teal text-white p-3 text-left text-sm font-semibold">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attendanceRecords.map((record) => (
+                      <tr key={record.id} className="hover:bg-gray-50">
+                        <td className="p-3 border-b border-gray-200 text-sm">{formatDate(record.date)}</td>
+                        <td className="p-3 border-b border-gray-200 text-sm">{formatTime(record.loginTime)}</td>
+                        <td className="p-3 border-b border-gray-200 text-sm">{formatTime(record.logoutTime)}</td>
+                        <td className="p-3 border-b border-gray-200 text-sm font-medium text-teal">{record.totalWorked}</td>
+                        <td className="p-3 border-b border-gray-200 text-sm">{record.totalBreak}</td>
+                        <td className="p-3 border-b border-gray-200">
+                          <button onClick={() => handleSelectRecord(record)} className="bg-teal text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-teal-dark transition-colors">Request Correction</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!isEditing && (
+          <div className="bg-white rounded-lg shadow-sm">
+            <div className="p-4 border-b border-gray-200">
+              <h2 className="text-lg font-bold text-teal">My Correction Requests</h2>
+            </div>
+            {correctionRequests.length === 0 ? (
+              <div className="text-center py-10 text-gray-500">No correction requests submitted</div>
+            ) : (
+              <div className="p-4 space-y-4">
+                {correctionRequests.map((request) => (
+                  <div key={request.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <span className="font-semibold text-gray-800">{formatDate(request.originalRecord.date)}</span>
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${getStatusClass(request.status)}`}>{request.status}</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-3">
+                      <div className="bg-gray-50 p-3 rounded">
+                        <h4 className="font-medium text-gray-800 mb-1">Original</h4>
+                        <p className="text-gray-500">Login: {formatTime(request.originalRecord.loginTime)}</p>
+                        <p className="text-gray-500">Logout: {formatTime(request.originalRecord.logoutTime)}</p>
+                      </div>
+                      <div className="bg-teal/5 p-3 rounded">
+                        <h4 className="font-medium text-teal mb-1">Requested</h4>
+                        <p className="text-gray-800">Login: {formatTime(request.newLoginTime)}</p>
+                        <p className="text-gray-800">Logout: {formatTime(request.newLogoutTime)}</p>
+                      </div>
+                    </div>
+                    <div className="text-sm"><span className="text-gray-500">Reason:</span> <span className="text-gray-800">{request.reason}</span></div>
+                    {request.rejectionReason && <div className="text-sm mt-2"><span className="text-red">Rejection:</span> <span className="text-gray-800">{request.rejectionReason}</span></div>}
+                    <div className="text-xs text-gray-500 mt-2">Submitted: {formatDate(request.submittedDate)}{request.reviewedDate && ` • Reviewed: ${formatDate(request.reviewedDate)}`}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

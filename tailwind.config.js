@@ -4,21 +4,28 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        ocean: {
-          50: '#e6f3f7',
-          100: '#b3dce8',
-          200: '#80c5d9',
-          300: '#4daeca',
-          400: '#1a97bb',
-          500: '#0077a3',
-          600: '#005d7f',
-          700: '#00445b',
-          800: '#002a37',
-          900: '#001113',
+        // 10-color minimal palette
+        teal: {
+          DEFAULT: '#14b8a6',
+          dark: '#0d9488',
+        },
+        gray: {
+          50: '#f9fafb',
+          200: '#e5e7eb',
+          500: '#6b7280',
+          800: '#1f2937',
+        },
+        red: {
+          DEFAULT: '#ef4444',
+        },
+        amber: {
+          DEFAULT: '#f59e0b',
+        },
+        green: {
+          DEFAULT: '#10b981',
         },
       },
     },

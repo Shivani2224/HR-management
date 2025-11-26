@@ -7,46 +7,26 @@ function LeaveRequest({ username, userRole }) {
   const [reason, setReason] = useState('')
   const [requests, setRequests] = useState([])
 
-  // Load existing requests from localStorage on component mount
-  useEffect(() => {
-    const savedRequests = localStorage.getItem(`leaveRequests_${username}`)
-    if (savedRequests) {
-      setRequests(JSON.parse(savedRequests))
-    }
-  }, [username])
+  useEffect(() => { loadRequests() }, [username])
 
-  // Save requests to localStorage whenever they change
-  useEffect(() => {
-    if (requests.length > 0) {
-      localStorage.setItem(`leaveRequests_${username}`, JSON.stringify(requests))
-    }
-  }, [requests, username])
+  const loadRequests = () => {
+    const userRequests = JSON.parse(localStorage.getItem(`leaveRequests_${username}`) || '[]')
+    setRequests(userRequests)
+  }
+
+  const calculateDays = () => {
+    if (!startDate || !endDate) return 0
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1
+    return diff > 0 ? diff : 0
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    if (!startDate || !endDate || !reason.trim()) { alert('Please fill all fields'); return }
+    if (new Date(endDate) < new Date(startDate)) { alert('End date must be after start date'); return }
 
-    // Validation
-    if (!startDate || !endDate) {
-      alert('Please select both start and end dates')
-      return
-    }
-
-    if (new Date(endDate) < new Date(startDate)) {
-      alert('End date cannot be before start date')
-      return
-    }
-
-    if (!reason.trim()) {
-      alert('Please provide a reason for your leave request')
-      return
-    }
-
-    // Calculate number of days
-    const start = new Date(startDate)
-    const end = new Date(endDate)
-    const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1
-
-    // Create new request
     const newRequest = {
       id: Date.now(),
       username,
@@ -54,170 +34,105 @@ function LeaveRequest({ username, userRole }) {
       type: leaveType,
       startDate,
       endDate,
-      days,
+      days: calculateDays(),
       reason,
       status: 'pending',
-      submittedDate: new Date().toISOString(),
+      submittedDate: new Date().toISOString()
     }
 
-    // Save to user's personal list
-    setRequests([newRequest, ...requests])
+    const userRequests = JSON.parse(localStorage.getItem(`leaveRequests_${username}`) || '[]')
+    userRequests.unshift(newRequest)
+    localStorage.setItem(`leaveRequests_${username}`, JSON.stringify(userRequests))
 
-    // Save to global list for manager/admin approval
-    const globalRequests = JSON.parse(localStorage.getItem('allLeaveRequests') || '[]')
-    globalRequests.unshift(newRequest)
-    localStorage.setItem('allLeaveRequests', JSON.stringify(globalRequests))
+    const allRequests = JSON.parse(localStorage.getItem('allLeaveRequests') || '[]')
+    allRequests.unshift(newRequest)
+    localStorage.setItem('allLeaveRequests', JSON.stringify(allRequests))
 
-    // Reset form
-    setLeaveType('vacation')
+    alert('Leave request submitted successfully!')
     setStartDate('')
     setEndDate('')
     setReason('')
-
-    alert('Leave request submitted successfully!')
+    loadRequests()
   }
 
-  const getStatusBadgeClass = (status) => {
+  const formatDate = (dateString) => new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+  const getStatusClass = (status) => {
     switch (status) {
-      case 'approved':
-        return 'px-4 py-2 rounded-full text-sm font-semibold bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-      case 'rejected':
-        return 'px-4 py-2 rounded-full text-sm font-semibold bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-      default:
-        return 'px-4 py-2 rounded-full text-sm font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
+      case 'approved': return 'bg-green/10 text-green'
+      case 'rejected': return 'bg-red/10 text-red'
+      default: return 'bg-amber/10 text-amber'
     }
   }
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
-  }
-
   return (
-    <div className="bg-white dark:bg-[#0f3460] rounded-xl p-8 shadow-lg max-w-4xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-[#006d77] dark:text-[#83c5be] mb-6">Leave Requests</h1>
-        <p className="text-gray-600 dark:text-gray-300">Submit and manage your leave requests</p>
-      </div>
+    <div className="min-h-[calc(100vh-60px)] bg-gray-50 p-5">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-teal mb-1">Leave Request</h1>
+          <p className="text-gray-500">Submit and track your leave requests</p>
+        </div>
 
-      {/* Submit New Request Form */}
-      <div className="bg-[#f8f9fa] dark:bg-[#16213e] p-6 rounded-lg border-2 border-[#e9ecef] dark:border-[#2a3f5f] mb-8">
-        <h2 className="text-xl font-semibold text-[#006d77] dark:text-[#83c5be] mb-4">Submit New Request</h2>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="leaveType" className="block text-sm font-medium text-gray-700 dark:text-gray-200">Leave Type</label>
-              <select
-                id="leaveType"
-                value={leaveType}
-                onChange={(e) => setLeaveType(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-[#83c5be] dark:border-[rgba(131,197,190,0.3)] rounded-lg bg-[#edf6f9] dark:bg-[rgba(22,33,62,0.6)] dark:text-white focus:outline-none focus:border-[#006d77]"
-              >
-                <option value="vacation">Vacation Leave</option>
+        <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
+          <h2 className="text-lg font-bold text-teal mb-4">New Leave Request</h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-500 mb-1">Leave Type</label>
+              <select value={leaveType} onChange={(e) => setLeaveType(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:border-teal">
+                <option value="vacation">Vacation</option>
                 <option value="sick">Sick Leave</option>
-                <option value="personal">Personal Leave</option>
-                <option value="emergency">Emergency Leave</option>
-                <option value="maternity">Maternity Leave</option>
-                <option value="paternity">Paternity Leave</option>
+                <option value="personal">Personal</option>
               </select>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 dark:text-gray-200">Start Date</label>
-              <input
-                type="date"
-                id="startDate"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-[#83c5be] dark:border-[rgba(131,197,190,0.3)] rounded-lg bg-[#edf6f9] dark:bg-[rgba(22,33,62,0.6)] dark:text-white focus:outline-none focus:border-[#006d77]"
-                min={new Date().toISOString().split('T')[0]}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 dark:text-gray-200">End Date</label>
-              <input
-                type="date"
-                id="endDate"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-[#83c5be] dark:border-[rgba(131,197,190,0.3)] rounded-lg bg-[#edf6f9] dark:bg-[rgba(22,33,62,0.6)] dark:text-white focus:outline-none focus:border-[#006d77]"
-                min={startDate || new Date().toISOString().split('T')[0]}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="reason" className="block text-sm font-medium text-gray-700 dark:text-gray-200">Reason</label>
-            <textarea
-              id="reason"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-[#83c5be] dark:border-[rgba(131,197,190,0.3)] rounded-lg bg-[#edf6f9] dark:bg-[rgba(22,33,62,0.6)] dark:text-white focus:outline-none focus:border-[#006d77]"
-              rows="4"
-              placeholder="Please provide a reason for your leave request..."
-            />
-          </div>
-
-          <button type="submit" className="px-6 py-3 bg-gradient-to-br from-[#006d77] to-[#83c5be] text-white rounded-lg font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all">
-            Submit Request
-          </button>
-        </form>
-      </div>
-
-      {/* Request History */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-[#006d77] dark:text-[#83c5be]">My Leave Requests</h2>
-        {requests.length === 0 ? (
-          <div className="bg-[#f8f9fa] dark:bg-[#16213e] p-6 rounded-lg border-2 border-[#e9ecef] dark:border-[#2a3f5f] text-center">
-            <p className="text-gray-600 dark:text-gray-300">No leave requests submitted yet</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {requests.map((request) => (
-              <div key={request.id} className="bg-[#f8f9fa] dark:bg-[#16213e] p-6 rounded-lg border-2 border-[#e9ecef] dark:border-[#2a3f5f]">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">📅</span>
-                    <span className="text-lg font-semibold text-[#006d77] dark:text-[#83c5be]">
-                      {request.type.charAt(0).toUpperCase() + request.type.slice(1)} Leave
-                    </span>
-                  </div>
-                  <span className={getStatusBadgeClass(request.status)}>
-                    {request.status.toUpperCase()}
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Duration:</span>
-                    <span className="text-gray-900 dark:text-white">
-                      {formatDate(request.startDate)} - {formatDate(request.endDate)}
-                      <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">({request.days} day{request.days > 1 ? 's' : ''})</span>
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Submitted:</span>
-                    <span className="text-gray-900 dark:text-white">
-                      {formatDate(request.submittedDate)}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <span className="text-gray-600 dark:text-gray-400">Reason:</span>
-                    <span className="text-gray-900 dark:text-white">{request.reason}</span>
-                  </div>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Start Date</label>
+                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:border-teal" />
               </div>
-            ))}
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">End Date</label>
+                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:border-teal" />
+              </div>
+            </div>
+            {calculateDays() > 0 && (
+              <div className="text-sm text-teal font-medium">Duration: {calculateDays()} day{calculateDays() > 1 ? 's' : ''}</div>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-500 mb-1">Reason</label>
+              <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows="3" placeholder="Please provide a reason for your leave..." className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:border-teal resize-none" />
+            </div>
+            <button type="submit" className="bg-teal text-white px-6 py-2.5 rounded-md font-medium hover:bg-teal-dark transition-colors">Submit Request</button>
+          </form>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm">
+          <div className="p-4 border-b border-gray-200">
+            <h2 className="text-lg font-bold text-teal">My Leave Requests</h2>
           </div>
-        )}
+          {requests.length === 0 ? (
+            <div className="text-center py-10 text-gray-500">No leave requests submitted</div>
+          ) : (
+            <div className="p-4 space-y-4">
+              {requests.map((request) => (
+                <div key={request.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <span className="font-semibold text-gray-800 capitalize">{request.type} Leave</span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${getStatusClass(request.status)}`}>{request.status}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm mb-2">
+                    <div><span className="text-gray-500">From:</span> <span className="text-gray-800">{formatDate(request.startDate)}</span></div>
+                    <div><span className="text-gray-500">To:</span> <span className="text-gray-800">{formatDate(request.endDate)}</span></div>
+                    <div><span className="text-gray-500">Days:</span> <span className="text-gray-800">{request.days}</span></div>
+                    <div><span className="text-gray-500">Submitted:</span> <span className="text-gray-800">{formatDate(request.submittedDate)}</span></div>
+                  </div>
+                  <div className="text-sm"><span className="text-gray-500">Reason:</span> <span className="text-gray-800">{request.reason}</span></div>
+                  {request.rejectionReason && (
+                    <div className="text-sm mt-2"><span className="text-red">Rejection:</span> <span className="text-gray-800">{request.rejectionReason}</span></div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

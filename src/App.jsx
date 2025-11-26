@@ -19,24 +19,7 @@ import TimeCorrectionApproval from './components/TimeCorrectionApproval'
 function App() {
   const [user, setUser] = useState(null)
   const [currentView, setCurrentView] = useState('dashboard')
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('darkMode')
-    return saved === 'true'
-  })
 
-  // Apply dark mode class to document root
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
-    localStorage.setItem('darkMode', darkMode)
-  }, [darkMode])
-
-  const toggleDarkMode = () => {
-    setDarkMode(prev => !prev)
-  }
 
   const handleLogin = (username, role) => {
     setUser({ username, role })
@@ -53,7 +36,7 @@ function App() {
   }
 
   return (
-    <div className={`min-h-screen ${user ? 'bg-[#f5f6fa] dark:bg-[#16213e]' : 'flex justify-center items-center p-5'}`}>
+    <div>
       {!user ? (
         <Login onLogin={handleLogin} />
       ) : (
@@ -63,10 +46,8 @@ function App() {
             onLogout={handleLogout}
             onNavigate={handleNavigate}
             currentView={currentView}
-            darkMode={darkMode}
-            toggleDarkMode={toggleDarkMode}
           />
-          <div className="p-[30px] max-w-[1400px] mx-auto">
+          <div>
             {user.role === 'employee' && (
               <>
                 {currentView === 'dashboard' && <EmployeeDashboard user={user} />}

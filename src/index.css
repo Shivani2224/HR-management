@@ -1,13 +1,39 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@layer base {
-  body {
-    @apply min-h-screen bg-gradient-to-br from-[#006d77] to-[#83c5be];
-  }
+@theme {
+  --color-teal: #14b8a6;
+  --color-teal-dark: #0d9488;
+  --color-gray-50: #f9fafb;
+  --color-gray-200: #e5e7eb;
+  --color-gray-500: #6b7280;
+  --color-gray-800: #1f2937;
+  --color-red: #ef4444;
+  --color-amber: #f59e0b;
+  --color-green: #10b981;
+}
 
-  #root {
-    @apply min-h-screen;
-  }
+/* Base styles */
+body {
+  background-color: var(--color-gray-50);
+  color: var(--color-gray-800);
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.6;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: var(--color-gray-50);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-gray-200);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-gray-500);
 }

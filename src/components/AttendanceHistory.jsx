@@ -40,7 +40,6 @@ function AttendanceHistory({ username }) {
 
   const getFilteredData = () => {
     if (filterMonth === 'all') return attendanceData
-
     const now = new Date()
     const currentMonth = now.getMonth()
     const currentYear = now.getFullYear()
@@ -80,12 +79,8 @@ function AttendanceHistory({ username }) {
       alert('No data to download')
       return
     }
-
-    // CSV Header
     const headers = ['Date', 'Login Time', 'Logout Time', 'Work Hours', 'Break Time']
     const csvRows = [headers.join(',')]
-
-    // CSV Data
     filtered.forEach(session => {
       const row = [
         session.date,
@@ -96,8 +91,6 @@ function AttendanceHistory({ username }) {
       ]
       csvRows.push(row.join(','))
     })
-
-    // Create CSV file
     const csvContent = csvRows.join('\n')
     const blob = new Blob([csvContent], { type: 'text/csv' })
     const url = window.URL.createObjectURL(blob)
@@ -113,102 +106,105 @@ function AttendanceHistory({ username }) {
   const filteredData = getFilteredData()
 
   return (
-    <div className="bg-white dark:bg-[#0f3460] rounded-xl p-8 shadow-lg max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-[#006d77] dark:text-[#83c5be] mb-6">Attendance History</h1>
-        <p className="text-gray-600 dark:text-gray-300">View your work attendance records</p>
-      </div>
+    <div className="min-h-[calc(100vh-60px)] bg-gray-50 p-5">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-teal mb-1">Attendance History</h1>
+          <p className="text-gray-500">View your work attendance records</p>
+        </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-[#f8f9fa] dark:bg-[#16213e] p-6 rounded-lg border-2 border-[#e9ecef] dark:border-[#2a3f5f]">
-          <div className="flex items-center gap-3">
-            <div className="text-4xl">📅</div>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 flex items-center gap-4">
+            <div className="text-3xl">📅</div>
             <div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Total Days</div>
-              <div className="text-2xl font-bold text-[#006d77] dark:text-[#83c5be]">{stats.totalDays}</div>
+              <div className="text-sm text-gray-500">Total Days</div>
+              <div className="text-2xl font-bold text-teal">{stats.totalDays}</div>
+            </div>
+          </div>
+
+          <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 flex items-center gap-4">
+            <div className="text-3xl">⏰</div>
+            <div>
+              <div className="text-sm text-gray-500">Total Hours</div>
+              <div className="text-2xl font-bold text-teal">{stats.totalHours}h</div>
+            </div>
+          </div>
+
+          <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 flex items-center gap-4">
+            <div className="text-3xl">☕</div>
+            <div>
+              <div className="text-sm text-gray-500">Total Breaks</div>
+              <div className="text-2xl font-bold text-teal">{stats.totalBreaks}h</div>
+            </div>
+          </div>
+
+          <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 flex items-center gap-4">
+            <div className="text-3xl">📊</div>
+            <div>
+              <div className="text-sm text-gray-500">Avg Hours/Day</div>
+              <div className="text-2xl font-bold text-teal">{stats.avgHours}h</div>
             </div>
           </div>
         </div>
 
-        <div className="bg-[#f8f9fa] dark:bg-[#16213e] p-6 rounded-lg border-2 border-[#e9ecef] dark:border-[#2a3f5f]">
+        {/* Filter and Download */}
+        <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
           <div className="flex items-center gap-3">
-            <div className="text-4xl">⏰</div>
-            <div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Total Hours</div>
-              <div className="text-2xl font-bold text-[#006d77] dark:text-[#83c5be]">{stats.totalHours}h</div>
+            <label className="text-sm font-medium text-gray-800">Filter by:</label>
+            <select
+              value={filterMonth}
+              onChange={(e) => setFilterMonth(e.target.value)}
+              className="px-4 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:border-teal"
+            >
+              <option value="all">All Time</option>
+              <option value="current">This Month</option>
+              <option value="last">Last Month</option>
+            </select>
+          </div>
+
+          <button
+            onClick={downloadCSV}
+            className="bg-teal text-white px-4 py-2 rounded-md font-medium text-sm hover:bg-teal-dark transition-colors"
+          >
+            📥 Download CSV
+          </button>
+        </div>
+
+        {/* Attendance Table */}
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          {filteredData.length === 0 ? (
+            <div className="text-center py-16 text-gray-500">
+              <p className="text-lg mb-2">No attendance records found</p>
+              <p className="text-sm">Start tracking your time to see records here</p>
             </div>
-          </div>
-        </div>
-
-        <div className="bg-[#f8f9fa] dark:bg-[#16213e] p-6 rounded-lg border-2 border-[#e9ecef] dark:border-[#2a3f5f]">
-          <div className="flex items-center gap-3">
-            <div className="text-4xl">☕</div>
-            <div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Total Breaks</div>
-              <div className="text-2xl font-bold text-[#006d77] dark:text-[#83c5be]">{stats.totalBreaks}h</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    <th className="bg-teal text-white p-3 text-left text-sm font-semibold">Date</th>
+                    <th className="bg-teal text-white p-3 text-left text-sm font-semibold">Login Time</th>
+                    <th className="bg-teal text-white p-3 text-left text-sm font-semibold">Logout Time</th>
+                    <th className="bg-teal text-white p-3 text-left text-sm font-semibold">Work Hours</th>
+                    <th className="bg-teal text-white p-3 text-left text-sm font-semibold">Break Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredData.map((session) => (
+                    <tr key={session.id} className="hover:bg-gray-50">
+                      <td className="p-3 border-b border-gray-200 text-sm">{formatDate(session.date)}</td>
+                      <td className="p-3 border-b border-gray-200 text-sm">{formatTime(session.loginTime)}</td>
+                      <td className="p-3 border-b border-gray-200 text-sm">{formatTime(session.logoutTime)}</td>
+                      <td className="p-3 border-b border-gray-200 text-sm font-medium text-teal">{session.totalWorked}</td>
+                      <td className="p-3 border-b border-gray-200 text-sm">{session.totalBreak}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </div>
+          )}
         </div>
-
-        <div className="bg-[#f8f9fa] dark:bg-[#16213e] p-6 rounded-lg border-2 border-[#e9ecef] dark:border-[#2a3f5f]">
-          <div className="flex items-center gap-3">
-            <div className="text-4xl">📊</div>
-            <div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Avg Hours/Day</div>
-              <div className="text-2xl font-bold text-[#006d77] dark:text-[#83c5be]">{stats.avgHours}h</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter and Download */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-3">
-          <label className="text-gray-700 dark:text-gray-200 font-medium">Filter by:</label>
-          <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="w-full px-4 py-3 border-2 border-[#83c5be] dark:border-[rgba(131,197,190,0.3)] rounded-lg bg-[#edf6f9] dark:bg-[rgba(22,33,62,0.6)] dark:text-white focus:outline-none focus:border-[#006d77]">
-            <option value="all">All Time</option>
-            <option value="current">This Month</option>
-            <option value="last">Last Month</option>
-          </select>
-        </div>
-
-        <button onClick={downloadCSV} className="px-6 py-3 bg-gradient-to-br from-[#006d77] to-[#83c5be] text-white rounded-lg font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all">
-          📥 Download CSV
-        </button>
-      </div>
-
-      {/* Attendance Table */}
-      <div className="bg-white dark:bg-[#16213e] rounded-lg overflow-hidden border border-[#e9ecef] dark:border-[#2a3f5f]">
-        {filteredData.length === 0 ? (
-          <div className="p-8 text-center">
-            <p className="text-gray-600 dark:text-gray-300 mb-2">No attendance records found</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Start tracking your time to see records here</p>
-          </div>
-        ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="bg-[#f8f9fa] dark:bg-[#16213e] border-b border-[#e9ecef] dark:border-[#2a3f5f]">
-                <th className="px-6 py-4 text-left text-sm font-semibold text-[#006d77] dark:text-[#83c5be]">Date</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-[#006d77] dark:text-[#83c5be]">Login Time</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-[#006d77] dark:text-[#83c5be]">Logout Time</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-[#006d77] dark:text-[#83c5be]">Work Hours</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-[#006d77] dark:text-[#83c5be]">Break Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredData.map((session) => (
-                <tr key={session.id} className="border-b border-[#e9ecef] dark:border-[#2a3f5f] hover:bg-[#f8f9fa] dark:hover:bg-[#16213e]/50">
-                  <td className="px-6 py-4 text-gray-900 dark:text-white font-medium">{formatDate(session.date)}</td>
-                  <td className="px-6 py-4 text-gray-600 dark:text-gray-300">{formatTime(session.loginTime)}</td>
-                  <td className="px-6 py-4 text-gray-600 dark:text-gray-300">{formatTime(session.logoutTime)}</td>
-                  <td className="px-6 py-4 text-[#006d77] dark:text-[#83c5be] font-semibold">{session.totalWorked}</td>
-                  <td className="px-6 py-4 text-gray-600 dark:text-gray-300">{session.totalBreak}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
       </div>
     </div>
   )

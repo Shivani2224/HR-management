@@ -2,152 +2,78 @@ import { useState, useEffect } from 'react'
 
 function EmployeeDashboard({ user }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [loginTime, setLoginTime] = useState(null)
-  const [currentTime, setCurrentTime] = useState(Date.now())
   const [isOnBreak, setIsOnBreak] = useState(false)
-  const [breakStartTime, setBreakStartTime] = useState(null)
-  const [totalBreakTime, setTotalBreakTime] = useState(0)
-  const [sessionSummary, setSessionSummary] = useState(null)
-  const [loginHistory, setLoginHistory] = useState([])
+  const [loginTime, setLoginTime] = useState(null)
+  const [workTime, setWorkTime] = useState(0)
+  const [breakTime, setBreakTime] = useState(0)
+  const [sessionHistory, setSessionHistory] = useState([])
 
-  // Load active session from localStorage on mount
   useEffect(() => {
-    const savedSession = localStorage.getItem(`activeSession_${user.username}`)
-    if (savedSession) {
-      const session = JSON.parse(savedSession)
-      setIsLoggedIn(session.isLoggedIn)
-      setLoginTime(session.loginTime)
-      setIsOnBreak(session.isOnBreak)
-      setBreakStartTime(session.breakStartTime)
-      setTotalBreakTime(session.totalBreakTime)
-    }
-    loadLoginHistory()
+    loadSessionState()
+    loadSessionHistory()
   }, [user.username])
 
-  // Load login history
-  const loadLoginHistory = () => {
-    const attendanceHistory = JSON.parse(localStorage.getItem(`attendance_${user.username}`) || '[]')
-    // Get last 10 sessions
-    setLoginHistory(attendanceHistory.slice(0, 10))
+  useEffect(() => {
+    let interval
+    if (isLoggedIn && !isOnBreak) {
+      interval = setInterval(() => setWorkTime(prev => prev + 1000), 1000)
+    } else if (isLoggedIn && isOnBreak) {
+      interval = setInterval(() => setBreakTime(prev => prev + 1000), 1000)
+    }
+    return () => clearInterval(interval)
+  }, [isLoggedIn, isOnBreak])
+
+  const loadSessionState = () => {
+    const session = JSON.parse(localStorage.getItem(`activeSession_${user.username}`) || '{}')
+    if (session.isLoggedIn) {
+      setIsLoggedIn(true)
+      setLoginTime(session.loginTime)
+      setIsOnBreak(session.isOnBreak || false)
+      const elapsed = Date.now() - session.loginTime
+      setWorkTime(elapsed - (session.totalBreakMs || 0))
+      setBreakTime(session.totalBreakMs || 0)
+    }
   }
 
-  // Save active session to localStorage whenever it changes
-  useEffect(() => {
-    if (isLoggedIn) {
-      const sessionData = {
-        isLoggedIn,
-        loginTime,
-        isOnBreak,
-        breakStartTime,
-        totalBreakTime
-      }
-      localStorage.setItem(`activeSession_${user.username}`, JSON.stringify(sessionData))
-    } else {
-      // Clear session when logged out
-      localStorage.removeItem(`activeSession_${user.username}`)
-    }
-  }, [isLoggedIn, loginTime, isOnBreak, breakStartTime, totalBreakTime, user.username])
-
-  // Update current time every second
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(Date.now())
-    }, 1000)
-
-    return () => clearInterval(timer)
-  }, [])
-
-  // Auto-logout at end of day (midnight)
-  useEffect(() => {
-    if (!isLoggedIn) return
-
-    const checkEndOfDay = setInterval(() => {
-      const now = new Date()
-      const hours = now.getHours()
-      const minutes = now.getMinutes()
-
-      // Auto-logout at 11:59 PM
-      if (hours === 23 && minutes === 59) {
-        alert('End of day reached. Automatically logging you out.')
-        handleLogout()
-      }
-    }, 30000) // Check every 30 seconds
-
-    return () => clearInterval(checkEndOfDay)
-  }, [isLoggedIn])
+  const loadSessionHistory = () => {
+    const history = JSON.parse(localStorage.getItem(`attendance_${user.username}`) || '[]')
+    setSessionHistory(history.slice(0, 5))
+  }
 
   const handleLogin = () => {
+    const now = Date.now()
     setIsLoggedIn(true)
-    setLoginTime(Date.now())
-    setTotalBreakTime(0)
-    setSessionSummary(null)
+    setLoginTime(now)
+    setWorkTime(0)
+    setBreakTime(0)
+    localStorage.setItem(`activeSession_${user.username}`, JSON.stringify({ isLoggedIn: true, loginTime: now, isOnBreak: false, totalBreakMs: 0 }))
   }
 
   const handleLogout = () => {
-    if (isLoggedIn) {
-      // Auto break-out if still on break
-      let finalBreakTime = totalBreakTime
-      if (isOnBreak && breakStartTime) {
-        const currentBreakDuration = Date.now() - breakStartTime
-        finalBreakTime = totalBreakTime + currentBreakDuration
-        alert('You were still on break. Automatically ending your break before logout.')
-      }
-
-      const logoutTime = Date.now()
-      const totalWorkedMs = logoutTime - loginTime - finalBreakTime
-      const totalWorkedHours = Math.floor(totalWorkedMs / (1000 * 60 * 60))
-      const totalWorkedMinutes = Math.floor((totalWorkedMs % (1000 * 60 * 60)) / (1000 * 60))
-      const totalWorkedSeconds = Math.floor((totalWorkedMs % (1000 * 60)) / 1000)
-
-      const totalBreakHours = Math.floor(finalBreakTime / (1000 * 60 * 60))
-      const totalBreakMinutes = Math.floor((finalBreakTime % (1000 * 60 * 60)) / (1000 * 60))
-      const totalBreakSeconds = Math.floor((finalBreakTime % (1000 * 60)) / 1000)
-
-      const sessionData = {
-        id: Date.now(),
-        username: user.username,
-        userRole: user.role,
-        loginTime: loginTime,
-        logoutTime: logoutTime,
-        totalWorkedMs: totalWorkedMs,
-        totalBreakMs: finalBreakTime,
-        totalWorked: `${totalWorkedHours}h ${totalWorkedMinutes}m ${totalWorkedSeconds}s`,
-        totalBreak: `${totalBreakHours}h ${totalBreakMinutes}m ${totalBreakSeconds}s`,
-        date: new Date(loginTime).toISOString().split('T')[0]
-      }
-
-      // Save to attendance history
-      const attendanceHistory = JSON.parse(localStorage.getItem(`attendance_${user.username}`) || '[]')
-      attendanceHistory.unshift(sessionData)
-      localStorage.setItem(`attendance_${user.username}`, JSON.stringify(attendanceHistory))
-
-      setSessionSummary({
-        totalWorked: sessionData.totalWorked,
-        totalBreak: sessionData.totalBreak
-      })
-
-      setIsLoggedIn(false)
-      setLoginTime(null)
-      setIsOnBreak(false)
-      setBreakStartTime(null)
-
-      // Reload login history
-      loadLoginHistory()
-    }
+    const logoutTime = Date.now()
+    const session = { id: Date.now(), date: new Date().toISOString().split('T')[0], loginTime, logoutTime, totalWorkedMs: workTime, totalBreakMs: breakTime, totalWorked: formatTime(workTime), totalBreak: formatTime(breakTime) }
+    const history = JSON.parse(localStorage.getItem(`attendance_${user.username}`) || '[]')
+    history.unshift(session)
+    localStorage.setItem(`attendance_${user.username}`, JSON.stringify(history))
+    localStorage.removeItem(`activeSession_${user.username}`)
+    setIsLoggedIn(false)
+    setLoginTime(null)
+    setWorkTime(0)
+    setBreakTime(0)
+    loadSessionHistory()
   }
 
-  const handleBreakIn = () => {
-    setIsOnBreak(true)
-    setBreakStartTime(Date.now())
-  }
-
-  const handleBreakOut = () => {
-    if (isOnBreak && breakStartTime) {
-      const breakDuration = Date.now() - breakStartTime
-      setTotalBreakTime(prev => prev + breakDuration)
-      setIsOnBreak(false)
-      setBreakStartTime(null)
+  const handleBreakToggle = () => {
+    const session = JSON.parse(localStorage.getItem(`activeSession_${user.username}`) || '{}')
+    if (isOnBreak) {
+      session.isOnBreak = false
+      session.totalBreakMs = breakTime
+    } else {
+      session.isOnBreak = true
+      session.breakStartTime = Date.now()
     }
+    setIsOnBreak(!isOnBreak)
+    localStorage.setItem(`activeSession_${user.username}`, JSON.stringify(session))
   }
 
   const formatTime = (ms) => {
@@ -157,222 +83,82 @@ function EmployeeDashboard({ user }) {
     return `${hours}h ${minutes}m ${seconds}s`
   }
 
-  const getElapsedTime = () => {
-    if (!loginTime) return '0h 0m 0s'
-    return formatTime(currentTime - loginTime)
-  }
-
-  const getCurrentBreakTime = () => {
-    if (!isOnBreak || !breakStartTime) return '0h 0m 0s'
-    return formatTime(currentTime - breakStartTime)
-  }
-
-  const getTotalBreakTime = () => {
-    let total = totalBreakTime
-    if (isOnBreak && breakStartTime) {
-      total += (currentTime - breakStartTime)
-    }
-    return formatTime(total)
-  }
-
-  const getWorkTime = () => {
-    if (!loginTime) return '0h 0m 0s'
-    let totalBreak = totalBreakTime
-    if (isOnBreak && breakStartTime) {
-      totalBreak += (currentTime - breakStartTime)
-    }
-    return formatTime(currentTime - loginTime - totalBreak)
-  }
-
-  const formatDateTime = (timestamp) => {
-    return new Date(timestamp).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    })
-  }
+  const formatDateTime = (timestamp) => new Date(timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-[#16213e] dark:to-[#0f3460] p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-[calc(100vh-60px)] bg-gray-50 p-5">
+      <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h2 className="text-4xl font-bold bg-gradient-to-r from-[#006d77] to-[#83c5be] bg-clip-text text-transparent mb-2">
-            Employee Dashboard
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 text-lg">
-            Welcome, {user.username}!
-          </p>
+          <h1 className="text-2xl font-bold text-teal mb-1">Welcome, {user.username}!</h1>
+          <p className="text-gray-500">Track your work hours and manage your attendance</p>
         </div>
 
-        <div className="space-y-6">
-          {!isLoggedIn && !sessionSummary && (
-            <div className="flex justify-center">
-              <button
-                className="px-8 py-4 rounded-xl font-bold text-xl bg-gradient-to-r from-[#006d77] to-[#83c5be] text-white shadow-lg hover:shadow-xl transition-all hover:-translate-y-1"
-                onClick={handleLogin}
-              >
-                Login
-              </button>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-white p-6 rounded-lg shadow-sm text-center">
+            <div className="text-3xl font-bold text-teal mb-2">{formatTime(workTime)}</div>
+            <div className="text-sm text-gray-500">Work Time</div>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow-sm text-center">
+            <div className="text-3xl font-bold text-amber mb-2">{formatTime(breakTime)}</div>
+            <div className="text-sm text-gray-500">Break Time</div>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow-sm text-center">
+            <div className={`text-3xl font-bold mb-2 ${isLoggedIn ? (isOnBreak ? 'text-amber' : 'text-green') : 'text-gray-500'}`}>
+              {isLoggedIn ? (isOnBreak ? 'On Break' : 'Working') : 'Offline'}
             </div>
-          )}
+            <div className="text-sm text-gray-500">Status</div>
+          </div>
+        </div>
 
-          {isLoggedIn && (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-white dark:bg-[#0f3460] rounded-xl shadow-lg p-6 border-2 border-gray-200 dark:border-[#2a3f5f]">
-                  <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">
-                    Time Since Login
-                  </h3>
-                  <p className="text-3xl font-bold text-gray-800 dark:text-white">
-                    {getElapsedTime()}
-                  </p>
-                </div>
-
-                <div className="bg-white dark:bg-[#0f3460] rounded-xl shadow-lg p-6 border-2 border-[#006d77] dark:border-[#83c5be]">
-                  <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">
-                    Work Time
-                  </h3>
-                  <p className="text-3xl font-bold text-[#006d77] dark:text-[#83c5be]">
-                    {getWorkTime()}
-                  </p>
-                </div>
-
-                <div className="bg-white dark:bg-[#0f3460] rounded-xl shadow-lg p-6 border-2 border-[#e29578] dark:border-[#ffddd2]">
-                  <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">
-                    Total Break Time
-                  </h3>
-                  <p className="text-3xl font-bold text-[#e29578] dark:text-[#ffddd2]">
-                    {getTotalBreakTime()}
-                  </p>
-                </div>
-
-                {isOnBreak && (
-                  <div className="bg-gradient-to-br from-[#e29578] to-[#ffddd2] dark:from-[#e29578]/80 dark:to-[#ffddd2]/80 rounded-xl shadow-lg p-6 border-2 border-[#e29578]">
-                    <h3 className="text-sm font-semibold text-white mb-2">
-                      Current Break
-                    </h3>
-                    <p className="text-3xl font-bold text-white">
-                      {getCurrentBreakTime()}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex justify-center gap-4">
-                {!isOnBreak ? (
-                  <button
-                    className="px-8 py-4 rounded-xl font-bold text-lg bg-gradient-to-r from-[#e29578] to-[#ffddd2] text-white shadow-lg hover:shadow-xl transition-all hover:-translate-y-1"
-                    onClick={handleBreakIn}
-                  >
-                    Break In
-                  </button>
-                ) : (
-                  <button
-                    className="px-8 py-4 rounded-xl font-bold text-lg bg-gradient-to-r from-[#006d77] to-[#83c5be] text-white shadow-lg hover:shadow-xl transition-all hover:-translate-y-1"
-                    onClick={handleBreakOut}
-                  >
-                    Break Out
-                  </button>
-                )}
-
-                <button
-                  className="px-8 py-4 rounded-xl font-bold text-lg bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg hover:shadow-xl transition-all hover:-translate-y-1"
-                  onClick={handleLogout}
-                >
-                  Logout
+        <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
+          <h2 className="text-lg font-bold text-teal mb-4">Time Tracking</h2>
+          <div className="flex flex-wrap gap-3">
+            {!isLoggedIn ? (
+              <button onClick={handleLogin} className="bg-green text-white px-6 py-3 rounded-md font-medium hover:bg-green/90 transition-colors">Login</button>
+            ) : (
+              <>
+                <button onClick={handleBreakToggle} className={`px-6 py-3 rounded-md font-medium transition-colors ${isOnBreak ? 'bg-green text-white hover:bg-green/90' : 'bg-amber text-white hover:bg-amber/90'}`}>
+                  {isOnBreak ? 'End Break' : 'Start Break'}
                 </button>
-              </div>
-
-              {isOnBreak && (
-                <div className="bg-gradient-to-r from-[#e29578] to-[#ffddd2] text-white text-center py-3 px-6 rounded-xl font-semibold text-lg shadow-lg">
-                  Currently on Break
-                </div>
-              )}
-            </>
+                <button onClick={handleLogout} className="bg-red text-white px-6 py-3 rounded-md font-medium hover:bg-red/90 transition-colors">Logout</button>
+              </>
+            )}
+          </div>
+          {isLoggedIn && loginTime && (
+            <div className="mt-4 text-sm text-gray-500">Logged in at: {formatDateTime(loginTime)}</div>
           )}
+        </div>
 
-          {sessionSummary && (
-            <div className="bg-white dark:bg-[#0f3460] rounded-xl shadow-lg p-8 border-2 border-[#006d77] dark:border-[#83c5be]">
-              <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">
-                Session Summary
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div className="flex justify-between items-center p-4 bg-gray-50 dark:bg-[#16213e] rounded-lg">
-                  <span className="text-gray-600 dark:text-gray-400 font-semibold">
-                    Total Work Time:
-                  </span>
-                  <span className="text-xl font-bold text-[#006d77] dark:text-[#83c5be]">
-                    {sessionSummary.totalWorked}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center p-4 bg-gray-50 dark:bg-[#16213e] rounded-lg">
-                  <span className="text-gray-600 dark:text-gray-400 font-semibold">
-                    Total Break Time:
-                  </span>
-                  <span className="text-xl font-bold text-[#e29578]">
-                    {sessionSummary.totalBreak}
-                  </span>
-                </div>
-              </div>
-              <button
-                className="w-full px-6 py-3 rounded-lg font-bold text-lg bg-gradient-to-r from-[#006d77] to-[#83c5be] text-white shadow-lg hover:shadow-xl transition-all hover:-translate-y-1"
-                onClick={handleLogin}
-              >
-                Start New Session
-              </button>
-            </div>
-          )}
-
-          {/* Login History */}
-          {loginHistory.length > 0 && (
-            <div className="bg-white dark:bg-[#0f3460] rounded-xl shadow-lg p-6 border-2 border-gray-200 dark:border-[#2a3f5f]">
-              <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">
-                Recent Login History
-              </h3>
-              <div className="overflow-x-auto">
-                <div className="min-w-full">
-                  <div className="grid grid-cols-5 gap-4 p-4 bg-gradient-to-r from-[#006d77] to-[#83c5be] text-white font-bold rounded-t-lg">
-                    <div>Date</div>
-                    <div>Login Time</div>
-                    <div>Logout Time</div>
-                    <div>Work Hours</div>
-                    <div>Break Time</div>
-                  </div>
-                  {loginHistory.map((session) => (
-                    <div
-                      key={session.id}
-                      className="grid grid-cols-5 gap-4 p-4 border-b border-gray-200 dark:border-[#2a3f5f] hover:bg-gray-50 dark:hover:bg-[#16213e] transition-colors"
-                    >
-                      <div className="font-semibold text-gray-800 dark:text-white">
-                        {formatDate(session.date)}
-                      </div>
-                      <div className="text-gray-600 dark:text-gray-400">
-                        {formatDateTime(session.loginTime)}
-                      </div>
-                      <div className="text-gray-600 dark:text-gray-400">
-                        {formatDateTime(session.logoutTime)}
-                      </div>
-                      <div className="font-semibold text-[#006d77] dark:text-[#83c5be]">
-                        {session.totalWorked}
-                      </div>
-                      <div className="font-semibold text-[#e29578]">
-                        {session.totalBreak}
-                      </div>
-                    </div>
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-gray-200">
+            <h2 className="text-lg font-bold text-teal">Recent Sessions</h2>
+          </div>
+          {sessionHistory.length === 0 ? (
+            <div className="text-center py-10 text-gray-500">No sessions recorded yet</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    <th className="bg-teal text-white p-3 text-left text-sm font-semibold">Date</th>
+                    <th className="bg-teal text-white p-3 text-left text-sm font-semibold">Login</th>
+                    <th className="bg-teal text-white p-3 text-left text-sm font-semibold">Logout</th>
+                    <th className="bg-teal text-white p-3 text-left text-sm font-semibold">Work Time</th>
+                    <th className="bg-teal text-white p-3 text-left text-sm font-semibold">Break</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sessionHistory.map((session) => (
+                    <tr key={session.id} className="hover:bg-gray-50">
+                      <td className="p-3 border-b border-gray-200 text-sm">{session.date}</td>
+                      <td className="p-3 border-b border-gray-200 text-sm">{formatDateTime(session.loginTime)}</td>
+                      <td className="p-3 border-b border-gray-200 text-sm">{formatDateTime(session.logoutTime)}</td>
+                      <td className="p-3 border-b border-gray-200 text-sm font-medium text-teal">{session.totalWorked}</td>
+                      <td className="p-3 border-b border-gray-200 text-sm">{session.totalBreak}</td>
+                    </tr>
                   ))}
-                </div>
-              </div>
+                </tbody>
+              </table>
             </div>
           )}
         </div>
