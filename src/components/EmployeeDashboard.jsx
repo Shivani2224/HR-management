@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import TeamStatusPopup from './TeamStatusPopup'
 
 function EmployeeDashboard({ user }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -87,6 +88,7 @@ function EmployeeDashboard({ user }) {
 
   return (
     <div className="min-h-[calc(100vh-60px)] bg-gray-50 p-5">
+      <TeamStatusPopup />
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-teal mb-1">Welcome, {user.username}!</h1>

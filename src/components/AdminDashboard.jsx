@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import TeamStatusPopup from "./TeamStatusPopup";
 
 function AdminDashboard({ user, onNavigate }) {
   const [stats, setStats] = useState({
@@ -146,6 +147,7 @@ function AdminDashboard({ user, onNavigate }) {
 
   return (
     <div className="min-h-[calc(100vh-60px)] bg-gray-50 p-5">
+      <TeamStatusPopup />
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-teal mb-1">Admin Dashboard</h1>
